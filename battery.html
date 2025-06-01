@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Charge It Like Laplace!</title>
+  <style>
+    body {
+      background-color: #f4e3c3;
+      color: #3b2f2f;
+      font-family: "Georgia", serif;
+      margin: 0;
+      padding: 0px 20px 20px 20px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    h1 {
+      margin-top: 5;  
+      font-size: 5em;
+      text-align: center;
+      margin-bottom: 50px;
+    }
+
+    .main-container {
+      display: flex;
+      justify-content: center;
+      gap: 100px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      margin-bottom: 50px;
+    }
+
+    .battery {
+  width: 150px;
+  height: 375px;
+  border: 6px solid #3b2f2f;
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(to bottom, #fffefc, #e0d6c3);
+  margin: 0 auto;
+  box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
+}
+
+
+.battery::before {
+  content: '';
+  width: 40px;
+  height: 15px;
+  background-color: #3b2f2f;
+  position: absolute;
+  top: -20px;      
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 4px;
+}
+
+
+.charge {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  background-color: #4d2c14;
+  transition: height 0.1s;
+  border-radius: 0 0 6px 6px;
+}
+
+    
+
+    .percent {
+      margin-top: 10px;
+      font-size: 24px;
+      text-align: center;
+    }
+
+    .start-btn {
+      background-color: #3b2f2f;
+      color: #f4e3c3;
+      border: none;
+      padding: 10px 20px;
+      font-size: 22px;
+      border-radius: 10px;
+      cursor: pointer;
+      margin: 10px 5px;
+    }
+
+    canvas {
+      background-color: #f4e3c3;
+      border: 2px solid #3b2f2f;
+      border-radius: 20px;
+    }
+
+    .side-info {
+      color: #3b2f2f;
+      max-width: 300px;
+      font-size: 30px;
+      text-align: center;
+    }
+
+    .equation {
+      margin-top: 20px;
+      font-size: 25px;
+    }
+
+    .footer-info {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: flex-start;
+      font-size: 18px;
+      margin-top: auto;
+      margin-top: 40px;
+      color: #3b2f2f;
+      text-align: center;
+      padding: 0 40px;
+    }
+
+    .advisor b, .member b {
+      display: block;
+      font-size: 25px;
+    }
+
+    .member-group {
+      display: flex;
+      gap: 40px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    @media (max-width: 800px) {
+      .main-container {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .footer-info {
+        flex-direction: column;
+        gap: 20px;
+        padding: 0;
+        text-align: center;
+      }
+
+      .member-group {
+        flex-direction: column;
+        gap: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Charge It Like Laplace!</h1>
+
+  <div class="main-container">
+    <div>
+      <div class="battery">
+        <div class="charge" id="charge"></div>
+      </div>
+      <div class="percent" id="percent">0%</div>
+      <div style="text-align:center;">
+        <button class="start-btn" onclick="startCharging()">Start</button>
+        <button class="start-btn" onclick="resetCharging()">Reset</button>
+      </div>
+    </div>
+
+    <canvas id="graph" width="600" height="384"></canvas>
+
+    <div class="side-info">
+      <h3>Laplace Transform</h3>
+      <div class="equation">
+        \( V(s) = \frac{V}{sRC + 1} \)<br/>
+        \( V(t) = V_0 (1 - e^{-t/RC}) \)
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-info">
+    <div class="advisor">
+      <b>Advisor: Deepanshi Mam</b>
+      Maths Faculty, AIT
+    </div>
+    
+    
+
+    <div class="member-group">
+      <div class="member">
+        <b>Bhavana BS</b>
+        1AY24EE008<br>
+        EEE, 1<sup>st</sup> year
+      </div>
+
+      <div class="member">
+        <b>Nisha</b>
+        1AY24EE034<br>
+        EEE, 1<sup>st</sup> year
+      </div>
+
+      <div class="member">
+        <b>Shivanshu Kumar</b>
+        1AY24EE047<br>
+        EEE, 1<sup>st</sup> year
+      </div>
+    </div>
+  </div>
+
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <script>
+    const chargeEl = document.getElementById("charge");
+    const percentEl = document.getElementById("percent");
+    const canvas = document.getElementById("graph");
+    const ctx = canvas.getContext("2d");
+
+    let RC = 15 / 4; // 15 second charging
+    let V0 = 100;
+    let t = 0;
+    let percent = 0;
+    let graphData = [];
+    let animationFrameId;
+    let duration = 15;
+
+    function drawGraph() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.strokeStyle = "#3b2f2f";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(40, 10);
+      ctx.lineTo(40, canvas.height - 30);
+      ctx.lineTo(canvas.width - 10, canvas.height - 30);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(35, 15);
+      ctx.lineTo(40, 0);
+      ctx.lineTo(45, 15);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(canvas.width - 15, canvas.height - 35);
+      ctx.lineTo(canvas.width, canvas.height - 30);
+      ctx.lineTo(canvas.width - 15, canvas.height - 25);
+      ctx.stroke();
+
+      ctx.fillStyle = "#3b2f2f";
+      ctx.font = "16px Georgia";
+      ctx.fillText("0", 25, canvas.height - 15);
+      ctx.fillText("t", canvas.width - 20, canvas.height - 10);
+      ctx.fillText("V₀", 5, 20);
+      ctx.fillText("Vᵤ", 5, canvas.height / 2);
+
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.moveTo(40, 20);
+      ctx.lineTo(canvas.width - 10, 20);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.beginPath();
+      ctx.strokeStyle = "#4d2c14";
+      ctx.lineWidth = 3;
+      ctx.moveTo(40, canvas.height - 30);
+
+      for (let i = 0; i < graphData.length; i++) {
+        let time = graphData[i][0];
+        let voltage = graphData[i][1];
+
+        let x = 40 + time * (canvas.width - 50) / duration;
+        let y = canvas.height - 30 - (voltage / V0) * (canvas.height - 50);
+        ctx.lineTo(x, y);
+      }
+
+      ctx.stroke();
+    }
+
+    function startCharging() {
+      cancelAnimationFrame(animationFrameId);
+      t = 0;
+      percent = 0;
+      graphData = [];
+      chargeEl.style.height = "0%";
+      percentEl.textContent = "0%";
+      drawGraph();
+      animate();
+    }
+
+    function animate() {
+      if (percent >= 100) {
+        setTimeout(startCharging, 500); // optional restart
+        return;
+      }
+
+      t += 0.1;
+      let voltage = V0 * (1 - Math.exp(-t / RC));
+      percent = Math.min(Math.round((voltage / V0) * 100), 100);
+
+      chargeEl.style.height = percent + "%";
+      percentEl.textContent = percent + "%";
+
+      graphData.push([t, voltage]);
+      drawGraph();
+
+      animationFrameId = requestAnimationFrame(animate);
+    }
+
+    function resetCharging() {
+      cancelAnimationFrame(animationFrameId);
+      t = 0;
+      percent = 0;
+      graphData = [];
+      chargeEl.style.height = "0%";
+      percentEl.textContent = "0%";
+      drawGraph();
+    }
+
+    drawGraph();
+  </script>
+</body>
+</html>
+			
